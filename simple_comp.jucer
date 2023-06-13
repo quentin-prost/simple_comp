@@ -4,6 +4,8 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="Ehv1sn" name="simple_comp">
     <GROUP id="{0CB763C7-E605-9496-FAC0-B3E795F20828}" name="Source">
+      <FILE id="nlFXli" name="Comp.cpp" compile="1" resource="0" file="Source/Comp.cpp"/>
+      <FILE id="D7ImyR" name="Comp.h" compile="0" resource="0" file="Source/Comp.h"/>
       <FILE id="IxZMNl" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="QumB52" name="CompAhr.h" compile="0" resource="0" file="Source/CompAhr.h"/>
