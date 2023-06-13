@@ -13,7 +13,6 @@ void CompAhr<SampleType>::prepare(const juce::dsp::ProcessSpec& spec) {
 
 template <typename SampleType>
 void CompAhr<SampleType>::setAttack(SampleType attack) {
-    jassert(attack < static_cast<SampleType>(0.0));
     mAttack.time = attack;
     mAttack.counter = 0;
     mAttack.samples = (unsigned int) ceil(attack * mSampleRate);
@@ -97,18 +96,14 @@ SampleType CompAhr<SampleType>::applyHardKneeSample(SampleType input) {
         return (1.0 * mMakeUpGain.linear);
     } else {
         gainDb = mRatio.slope * (envelopeDb - mThreshold.db);
-        return juce::Decibels::decibelsToGain(gainDb + mMakeUpGain.dB);
+        return juce::Decibels::decibelsToGain(gainDb + mMakeUpGain.db);
     }
 }
 
 template <typename SampleType>
 void CompAhr<SampleType>::applySoftKnee(const juce::dsp::ProcessContextNonReplacing<SampleType>& context) {
-    SampleType gainDb, envelopeDb;
-    SampleType makeUpGainDb = mMakeUpGain.dB;
-    SampleType makeUpGainLinear = mMakeUpGain.linear;
     auto &output = context.getOutputBlock();
     auto blockSize = output.getNumSamples();
-    
     for (unsigned int n = 0; n < blockSize; n++) {
         applySoftKneeSample(mEnvelope[n]);
     }
@@ -122,7 +117,7 @@ SampleType CompAhr<SampleType>::applySoftKneeSample(SampleType input) {
         return (1.0 * mMakeUpGain.linear);
     } else if (envelopeDb > mKnee.top) {
         gainDb = mRatio.slope * (envelopeDb - mThreshold.db);
-        return juce::Decibels::decibelsToGain(gainDb + mMakeUpGain.dB);
+        return juce::Decibels::decibelsToGain(gainDb + mMakeUpGain.db);
     } else {
         gainDb = mRatio.slope * (envelopeDb - mThreshold.db + 0.5f * mKnee.width * (1.0f - cos((envelopeDb - mThreshold.db) / mKnee.width * M_PI)));
         return (juce::Decibels::decibelsToGain(gainDb + mMakeUpGain.db));
@@ -131,19 +126,20 @@ SampleType CompAhr<SampleType>::applySoftKneeSample(SampleType input) {
 
 template <typename SampleType>
 void CompAhr<SampleType>::processBlock(const juce::dsp::ProcessContextNonReplacing<SampleType>& context) {
-    
-    const auto& input = context.getInputBlock();
-    const auto blockSize = input.getNumSamples();
+    SampleType input;
+    const auto& input_block = context.getInputBlock();
+    const auto blockSize = input_block.getNumSamples();
     
     for (unsigned int n = 0; n < blockSize; n++) {
-        if (input[n] > current_envelope)
+        input = input_block.getSample(0, n);
+        if (input > current_envelope)
             mState = STATE_ATTACK;
         
         switch (mState) {
             case STATE_ATTACK:
                 mState = STATE_HOLD;
                 mHold.counter = 0;
-                current_envelope = mAttack.coefs[0] * current_envelope + mAttack.coefs[1] * input[n];
+                current_envelope = mAttack.coefs[0] * current_envelope + mAttack.coefs[1] * input;
                 break;
             case STATE_HOLD:
                 if (++mHold.counter > mHold.samples)
@@ -151,7 +147,7 @@ void CompAhr<SampleType>::processBlock(const juce::dsp::ProcessContextNonReplaci
                 break;
             case STATE_RELEASE:
                 mHold.counter = 0;
-                current_envelope = mRelease.coefs[0] * current_envelope + mRelease.coefs[1] * input[n];
+                current_envelope = mRelease.coefs[0] * current_envelope + mRelease.coefs[1] * input;
                 break;
         }
         mEnvelope[n] = current_envelope;
@@ -169,7 +165,6 @@ void CompAhr<SampleType>::processBlock(const juce::dsp::ProcessContextNonReplaci
 
 template <typename SampleType>
 SampleType CompAhr<SampleType>::processSample(SampleType input) {
-    SampleType output;
     
     if (input > current_envelope)
         mState = STATE_ATTACK;
@@ -200,3 +195,6 @@ SampleType CompAhr<SampleType>::processSample(SampleType input) {
             break;
     }
 }
+
+template class CompAhr<float>;
+template class CompAhr<double>;

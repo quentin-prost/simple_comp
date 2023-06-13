@@ -75,12 +75,14 @@ public:
     CompAhr() {
         setParams(mParams);
     }
-    CompAhr(int sampleRate) {
+    CompAhr(int sampleRate, int maxBlockSize) {
         mSampleRate = sampleRate;
+        mEnvelope.resize(maxBlockSize);
         setParams(mParams);
     }
     ~CompAhr();
     void prepare(const juce::dsp::ProcessSpec& spec);
+    void reset();
     void setAttack(SampleType attack);
     void setHold(SampleType hold);
     void setRelease(SampleType release);
@@ -98,6 +100,7 @@ private:
     void applySoftKnee(const juce::dsp::ProcessContextNonReplacing<SampleType>& context);
     SampleType applyHardKneeSample(SampleType envelopeDb);
     SampleType applySoftKneeSample(SampleType envelopeDb);
+    
     CompAhrParams<SampleType> mParams = {0.001, 0.0, 0.1, -6.0, 6.0, 2.0, 0.0};
     CompAhrState mState = STATE_RELEASE;
     CompAhrParamState<SampleType> mAttack, mHold, mRelease;
