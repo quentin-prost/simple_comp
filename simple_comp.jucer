@@ -6,6 +6,8 @@
     <GROUP id="{0CB763C7-E605-9496-FAC0-B3E795F20828}" name="Source">
       <FILE id="IxZMNl" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
+      <FILE id="QumB52" name="CompAhr.h" compile="0" resource="0" file="Source/CompAhr.h"/>
+      <FILE id="vS9OfH" name="CompAhr.cpp" compile="1" resource="0" file="Source/CompAhr.cpp"/>
       <FILE id="vu1jef" name="PluginProcessor.h" compile="0" resource="0"
             file="Source/PluginProcessor.h"/>
       <FILE id="HO3Tv4" name="PluginEditor.cpp" compile="1" resource="0"
