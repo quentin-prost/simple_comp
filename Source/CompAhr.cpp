@@ -128,9 +128,9 @@ template <typename SampleType>
 void CompAhr<SampleType>::processBlock(const juce::dsp::ProcessContextNonReplacing<SampleType>& context) {
     SampleType input;
     const auto& input_block = context.getInputBlock();
-    const auto blockSize = input_block.getNumSamples();
+    size_t blockSize = input_block.getNumSamples();
     
-    for (unsigned int n = 0; n < blockSize; n++) {
+    for (size_t n = 0; n < blockSize; n++) {
         input = input_block.getSample(0, n);
         if (input > current_envelope)
             mState = STATE_ATTACK;

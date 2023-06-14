@@ -10,8 +10,7 @@
 
 #include "JuceHeader.h"
 
-enum
-CompKneeType {
+enum CompKneeType {
     COMP_HARD_KNEE,
     COMP_SOFT_KNEE
 };
@@ -73,12 +72,12 @@ class CompAhr {
     
 public:
     CompAhr() {
-        setParams(mParams);
+        setParams(&mParams);
     }
     CompAhr(int sampleRate, int maxBlockSize) {
         mSampleRate = sampleRate;
         mEnvelope.resize(maxBlockSize);
-        setParams(mParams);
+        setParams(&mParams);
     }
     ~CompAhr();
     void prepare(const juce::dsp::ProcessSpec& spec);

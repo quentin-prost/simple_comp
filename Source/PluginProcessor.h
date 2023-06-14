@@ -9,6 +9,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "Comp.h"
 
 //==============================================================================
 /**
@@ -57,7 +58,6 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
-    juce::dsp::BallisticFilter signalEstimation;
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Simple_compAudioProcessor)
