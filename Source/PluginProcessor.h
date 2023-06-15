@@ -10,7 +10,7 @@
 
 #include <JuceHeader.h>
 #include "Comp.h"
-//#include "../Utilities/Utils.h"
+#include "../Utilities/Utils.h"
 
 namespace ParameterID
 {
