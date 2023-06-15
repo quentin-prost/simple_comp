@@ -79,7 +79,7 @@ public:
         mEnvelope.resize(maxBlockSize);
         setParams(&mParams);
     }
-    ~CompAhr();
+    ~CompAhr() {};
     void prepare(const juce::dsp::ProcessSpec& spec);
     void reset();
     void setAttack(SampleType attack);

@@ -6,6 +6,7 @@ void CompAhr<SampleType>::prepare(const juce::dsp::ProcessSpec& spec) {
     jassert(spec.maximumBlockSize > 0);
     mSampleRate = spec.sampleRate;
     mEnvelope.resize(spec.maximumBlockSize);
+    std::fill(mEnvelope.begin(), mEnvelope.end(), static_cast<SampleType>(1.0));
     setAttack(mParams.attack);
     setRelease(mParams.release);
     setHold(mParams.hold);
@@ -16,7 +17,7 @@ void CompAhr<SampleType>::setAttack(SampleType attack) {
     mAttack.time = attack;
     mAttack.counter = 0;
     mAttack.samples = (unsigned int) ceil(attack * mSampleRate);
-    mAttack.value = static_cast<SampleType>(1.0 - exp(-2.2 / (attack * mSampleRate)));
+    mAttack.value = static_cast<SampleType>(1.0 - exp(-2.2 / (attack * (float) mSampleRate)));
     mAttack.coefs[0] = static_cast<SampleType>(1.0 - mAttack.value);
     mAttack.coefs[1] = mAttack.value;
 }
@@ -26,7 +27,7 @@ void CompAhr<SampleType>::setHold(SampleType hold) {
     mHold.time = hold;
     mHold.counter = 0;
     mHold.samples = (unsigned int) ceil(hold * mSampleRate);
-    mHold.value = static_cast<SampleType>(1.0 - exp(-2.2 / (hold * mSampleRate)));
+    mHold.value = static_cast<SampleType>(1.0 - exp(-2.2 / (hold * (float) mSampleRate)));
     mHold.coefs[0] = static_cast<SampleType>(1.0 - mHold.value);
     mHold.coefs[1] = mHold.value;
 }
@@ -36,7 +37,7 @@ void CompAhr<SampleType>::setRelease(SampleType release) {
     mRelease.time = release;
     mRelease.counter = 0;
     mRelease.samples = (unsigned int) ceil(release * mSampleRate);
-    mRelease.value = static_cast<SampleType>(1.0 - exp(-2.2 / (release * mSampleRate)));
+    mRelease.value = static_cast<SampleType>(1.0 - exp(-2.2 / (release * (float) mSampleRate)));
     mRelease.coefs[0] = static_cast<SampleType>(1.0 - mRelease.value);
     mRelease.coefs[1] = mRelease.value;
 }
@@ -51,7 +52,7 @@ void CompAhr<SampleType>::setThreshold(SampleType threshold) {
 
 template <typename SampleType>
 void CompAhr<SampleType>::setKnee(SampleType knee) {
-    mKnee.type = knee == 0.0 ? COMP_HARD_KNEE : COMP_SOFT_KNEE;
+    mKnee.type = knee < __FLT_EPSILON__ ? COMP_HARD_KNEE : COMP_SOFT_KNEE;
     mKnee.width = knee;
     mKnee.bottom = mThreshold.db - static_cast<SampleType>(0.5)*mKnee.width;
     mKnee.top = mThreshold.db + static_cast<SampleType>(0.5)*mKnee.width;
@@ -81,10 +82,10 @@ void CompAhr<SampleType>::setParams(CompAhrParams<SampleType> *params) {
 
 template <typename SampleType>
 void CompAhr<SampleType>::applyHardKnee(const juce::dsp::ProcessContextNonReplacing<SampleType>& context) {
-    auto &output = context.getOutputBlock();
+    auto output = context.getOutputBlock();
     auto blockSize = output.getNumSamples();
     for (unsigned int n = 0; n < blockSize; n++) {
-        applyHardKneeSample(mEnvelope[n]);
+        output.setSample(0, n, applyHardKneeSample(mEnvelope[n]));
     }
 }
 
@@ -102,10 +103,11 @@ SampleType CompAhr<SampleType>::applyHardKneeSample(SampleType input) {
 
 template <typename SampleType>
 void CompAhr<SampleType>::applySoftKnee(const juce::dsp::ProcessContextNonReplacing<SampleType>& context) {
-    auto &output = context.getOutputBlock();
+    auto output = context.getOutputBlock();
     auto blockSize = output.getNumSamples();
     for (unsigned int n = 0; n < blockSize; n++) {
-        applySoftKneeSample(mEnvelope[n]);
+        output.setSample(0, n, applySoftKneeSample(mEnvelope[n]));
+        //printf("gains ahr %i %f\n", n, output.getSample(0, n));
     }
 }
 
@@ -131,7 +133,7 @@ void CompAhr<SampleType>::processBlock(const juce::dsp::ProcessContextNonReplaci
     size_t blockSize = input_block.getNumSamples();
     
     for (size_t n = 0; n < blockSize; n++) {
-        input = input_block.getSample(0, n);
+        input = input_block.getSample(0, (int) n);
         if (input > current_envelope)
             mState = STATE_ATTACK;
         
@@ -151,6 +153,7 @@ void CompAhr<SampleType>::processBlock(const juce::dsp::ProcessContextNonReplaci
                 break;
         }
         mEnvelope[n] = current_envelope;
+        //printf("mEnvelope[%i]: %f\n", n, mEnvelope[n]);
     }
         
     switch (mKnee.type) {
@@ -161,6 +164,7 @@ void CompAhr<SampleType>::processBlock(const juce::dsp::ProcessContextNonReplaci
             applySoftKnee(context);
             break;
     }
+    
 }
 
 template <typename SampleType>

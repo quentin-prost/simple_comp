@@ -3,6 +3,9 @@
 <JUCERPROJECT id="VFD73c" name="simple_comp" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="Ehv1sn" name="simple_comp">
+    <GROUP id="{88CAEE23-CE17-8142-EE6E-66903B56CD51}" name="Utilities">
+      <FILE id="eWx0u2" name="Utils.h" compile="0" resource="0" file="Source/Utils.h"/>
+    </GROUP>
     <GROUP id="{0CB763C7-E605-9496-FAC0-B3E795F20828}" name="Source">
       <FILE id="nlFXli" name="Comp.cpp" compile="1" resource="0" file="Source/Comp.cpp"/>
       <FILE id="D7ImyR" name="Comp.h" compile="0" resource="0" file="Source/Comp.h"/>

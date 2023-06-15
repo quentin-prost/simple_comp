@@ -19,13 +19,43 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ), apvts(*this, nullptr, "Parameters", createParameters()), comp(), outputBuffer()
 #endif
 {
+    // Initialisation of audio parameters pointer
+    castParameter(apvts, ParameterID::attackValue, params.attack);
+    castParameter(apvts, ParameterID::holdValue, params.hold);
+    castParameter(apvts, ParameterID::releaseValue, params.release);
+    castParameter(apvts, ParameterID::thresholdValue, params.threshold);
+    castParameter(apvts, ParameterID::kneeValue, params.knee);
+    castParameter(apvts, ParameterID::ratioValue, params.ratio);
+    castParameter(apvts, ParameterID::makeUpGainValue, params.makeUpGain);
+//    castParameter(apvts, ParameterID::estimationTypeValue, estimationType);
+    castParameter(apvts, ParameterID::bypassValue, params.bypass);
+    
+    apvts.addParameterListener(ParameterID::attackValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::holdValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::releaseValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::thresholdValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::kneeValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::ratioValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::makeUpGainValue.getParamID(), this);
+//    apvts.addParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::bypassValue.getParamID(), this);
+    
 }
 
 Simple_compAudioProcessor::~Simple_compAudioProcessor()
 {
+    apvts.removeParameterListener(ParameterID::attackValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::holdValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::releaseValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::thresholdValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::kneeValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::ratioValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::makeUpGainValue.getParamID(), this);
+//    apvts.removeParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::bypassValue.getParamID(), this);
 }
 
 //==============================================================================
@@ -93,14 +123,16 @@ void Simple_compAudioProcessor::changeProgramName (int index, const juce::String
 //==============================================================================
 void Simple_compAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    juce::dsp::ProcessSpec spec;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.sampleRate = sampleRate;
+    spec.numChannels = getTotalNumOutputChannels();
+    comp.prepare(spec);
+    outputBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
 }
 
 void Simple_compAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -132,30 +164,22 @@ bool Simple_compAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
 void Simple_compAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
-
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
+    
+    auto blockSize = getBlockSize();
+    auto inputBlock = juce::dsp::AudioBlock<float> (buffer);
+    auto outputBlock = juce::dsp::AudioBlock<float> (outputBuffer);
+    auto processContext = juce::dsp::ProcessContextNonReplacing<float> (inputBlock, outputBlock);
+    auto output_left = buffer.getWritePointer(0);
+    auto output_right = buffer.getWritePointer(1);
+    
+    comp.processBlock(processContext);
+    
+    for (int n = 0; n < blockSize; n++) {
+        output_left[n] = outputBlock.getSample(0, n);
+        output_right[n] = outputBlock.getSample(1, n);
     }
+//    limitOutput(buffer.getWritePointer(0), buffer.getNumSamples());
+//    limitOutput(buffer.getWritePointer(1), buffer.getNumSamples());
 }
 
 //==============================================================================
@@ -166,7 +190,9 @@ bool Simple_compAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* Simple_compAudioProcessor::createEditor()
 {
-    return new Simple_compAudioProcessorEditor (*this);
+    auto editor = new juce::GenericAudioProcessorEditor(*this);
+    editor->setSize(500, 750);
+    return editor;
 }
 
 //==============================================================================
@@ -188,4 +214,65 @@ void Simple_compAudioProcessor::setStateInformation (const void* data, int sizeI
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new Simple_compAudioProcessor();
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout Simple_compAudioProcessor::createParameters() {
+
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+    juce::AudioProcessorValueTreeState::ParameterLayout paramsLayout;
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::attackValue, "Attack Time", juce::NormalisableRange<float>(0.0001f, 0.5f, 0.0001f, 0.8f), 0.010f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::holdValue, "Hold Time", juce::NormalisableRange<float>(0.0f, 0.5f, 0.001f, 0.8f), 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::releaseValue, "Release Time", juce::NormalisableRange<float>(0.001f, 1.0f, 0.001f, 0.8f), 0.050f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::thresholdValue, "Threshold", juce::NormalisableRange<float>(-80.0f, 0.0f, 0.1f, 1.0f), -6.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::ratioValue, "Ratio", juce::NormalisableRange<float>(1.0f, 20.0f, 0.1f, 1.0f), 2.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::kneeValue, "Knee", juce::NormalisableRange<float>(0.0f, 12.0f, 0.1f, 1.0f), 6.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::makeUpGainValue, "Make Up Gain", juce::NormalisableRange<float>(0.0f, 20.0f, 0.1f, 1.0f), 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::bypassValue, "Bypass", false));
+    
+    paramsLayout.add(params.begin(), params.end());
+    
+    return paramsLayout;
+}
+
+void Simple_compAudioProcessor::parameterChanged(const juce::String& paramId, float newValue) {
+    if (paramId == ParameterID::attackValue.getParamID()) {
+        comp.setAttack(static_cast<float>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::holdValue.getParamID()) {
+        comp.setHold(static_cast<float>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::releaseValue.getParamID()) {
+        comp.setRelease(static_cast<float>(newValue));
+        return;
+    }
+
+    if (paramId == ParameterID::thresholdValue.getParamID()) {
+        comp.setThreshold(static_cast<float>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::kneeValue.getParamID()) {
+        comp.setKnee(static_cast<float>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::ratioValue.getParamID()) {
+        comp.setRatio(static_cast<float>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::makeUpGainValue.getParamID()) {
+        comp.setMakeUpGain(static_cast<float>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::bypassValue.getParamID()) {
+        comp.setBypass(static_cast<bool>(newValue));
+        return;
+    }
 }

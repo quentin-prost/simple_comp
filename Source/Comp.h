@@ -27,6 +27,7 @@ struct CompParams {
 template <typename SampleType>
 class Comp {
 public:
+    Comp();
     Comp(int sampleRate, int maxBlockSize);
     ~Comp();
     
@@ -37,6 +38,7 @@ public:
     void setThreshold(SampleType threshold);
     void setRatio(SampleType ratio);
     void setKnee(SampleType knee);
+    void setMakeUpGain(SampleType makeUpGain);
     void setLookAhead(bool active, SampleType lookAheadTime);
     void setBypass(bool active);
     void setEstimationType(EstimationType type);
@@ -45,10 +47,8 @@ public:
     SampleType processSample(SampleType input);
 public:
     CompAhr<SampleType> mAhr;
-    juce::AudioBuffer<SampleType> mControlGain;
-    juce::AudioBuffer<SampleType> mSignalLevel;
-    juce::dsp::AudioBlock<SampleType> mSideChain;
-    CompParams<SampleType> mParams = {0.01, 0.0, 0.1, -6.0, 2.0, 5.0, 0.0, EstimationType::RMS};
+    juce::AudioBuffer<SampleType> mControlGain, mSignalLevel, mSideChain;
+    CompParams<SampleType> mParams = {0.01, 0.0, 0.1, -6.0, 2.0, 5.0, 0.0, EstimationType::peak};
     juce::dsp::BallisticsFilter<SampleType> ballistic;
     int mSampleRate = 44100, mMaxBlockSize = 2048, mNumChannels = 2;
     bool bypass, lookAheadActive;

@@ -8,11 +8,18 @@
 #include "Comp.h"
 
 template <typename SampleType>
+Comp<SampleType>::Comp() : mAhr(), mControlGain(), mSignalLevel(), mSideChain(), ballistic()
+{
+    mSampleRate = 44100;
+    mMaxBlockSize = 2048;
+}
+
+template <typename SampleType>
 Comp<SampleType>::Comp(int sampleRate, int maxBlockSize) :
                                             mAhr(sampleRate, maxBlockSize),
                                             mControlGain(1, maxBlockSize),
                                             mSignalLevel(1, maxBlockSize),
-                                            mSideChain(),
+                                            mSideChain(1, maxBlockSize),
                                             ballistic()
 {
     mSampleRate = sampleRate;
@@ -31,8 +38,10 @@ void Comp<SampleType>::prepare(const juce::dsp::ProcessSpec &spec) {
     mNumChannels = spec.numChannels;
     mAhr.prepare(spec);
     mControlGain.setSize(1, mMaxBlockSize);
-    mSignalLevel.setSize(1, mSignalLevel);
+    mSignalLevel.setSize(1, mMaxBlockSize);
+    mSideChain.setSize(1, mMaxBlockSize);
     ballistic.prepare(spec);
+    setEstimationType(EstimationType::peak);
 }
 
 template <typename SampleType>
@@ -72,6 +81,12 @@ void Comp<SampleType>::setKnee(SampleType knee) {
 }
 
 template <typename SampleType>
+void Comp<SampleType>::setMakeUpGain(SampleType makeUpGain) {
+    mParams.makeUpGain = makeUpGain;
+    mAhr.setMakeUpGain(makeUpGain);
+}
+
+template <typename SampleType>
 void Comp<SampleType>::setBypass(bool active) {
     bypass = active;
 }
@@ -101,16 +116,16 @@ void Comp<SampleType>::setEstimationType(EstimationType type) {
 template <typename SampleType>
 void Comp<SampleType>::processBlock(juce::dsp::ProcessContextNonReplacing<SampleType> &context) {
         
-    auto& input = context.getInputBlock();
+    auto const& input = context.getInputBlock();
     auto& output = context.getOutputBlock();
     size_t blockSize = input.getNumSamples();
     
-    jassert(blockSize < mMaxBlockSize);
     juce::dsp::AudioBlock<SampleType> signalLevel(mSignalLevel);
     juce::dsp::AudioBlock<SampleType> gains(mControlGain);
-    mSideChain.copyFrom(input.getSingleChannelBlock(0));
-    mSideChain.add(input.getSingleChannelBlock(1));
-    mSideChain.multiplyBy(0.5);
+    juce::dsp::AudioBlock<SampleType> sideChain(mSideChain);
+    sideChain.copyFrom(input.getSingleChannelBlock(0));
+    sideChain.add(input.getSingleChannelBlock(1));
+    sideChain.multiplyBy(0.5);
     
     juce::dsp::ProcessContextNonReplacing<SampleType> context_ballistic(mSideChain, signalLevel);
     juce::dsp::ProcessContextNonReplacing<SampleType> context_ahr(signalLevel, gains);
@@ -119,10 +134,11 @@ void Comp<SampleType>::processBlock(juce::dsp::ProcessContextNonReplacing<Sample
     
     for (int n = 0; n < blockSize; n++) {
         for (int channel = 0; channel < mNumChannels; channel++) {
-            SampleType output_value = output.getSample(channel, n) * gains.getSample(channel, 0);
+            SampleType output_value = input.getSample(channel, n) * gains.getSample(0, n);
             output.setSample(channel, n, output_value);
         }
     }
+    
 }
 
 template class Comp<float>;
