@@ -4,9 +4,11 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="Ehv1sn" name="simple_comp">
     <GROUP id="{88CAEE23-CE17-8142-EE6E-66903B56CD51}" name="Utilities">
-      <FILE id="eWx0u2" name="Utils.h" compile="0" resource="0" file="Source/Utils.h"/>
+      <FILE id="XV1o7Z" name="Utils.h" compile="0" resource="0" file="Utilities/Utils.h"/>
     </GROUP>
     <GROUP id="{0CB763C7-E605-9496-FAC0-B3E795F20828}" name="Source">
+      <FILE id="aKQyZN" name="RingBuffer.cpp" compile="1" resource="0" file="Source/RingBuffer.cpp"/>
+      <FILE id="CAztKV" name="RingBuffer.h" compile="0" resource="0" file="Source/RingBuffer.h"/>
       <FILE id="nlFXli" name="Comp.cpp" compile="1" resource="0" file="Source/Comp.cpp"/>
       <FILE id="D7ImyR" name="Comp.h" compile="0" resource="0" file="Source/Comp.h"/>
       <FILE id="IxZMNl" name="PluginProcessor.cpp" compile="1" resource="0"
