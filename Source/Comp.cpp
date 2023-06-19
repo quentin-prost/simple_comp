@@ -8,7 +8,7 @@
 #include "Comp.h"
 
 template <typename SampleType>
-Comp<SampleType>::Comp() : mAhr(), mControlGain(), mSignalLevel(), mSideChain(), ballistic()
+Comp<SampleType>::Comp() : mAhr(), mControlGain(), mSignalLevel(), mSideChain(), ballistic(), lookAhead(44100, 0.01, 2)
 {
     mSampleRate = 44100;
     mMaxBlockSize = 2048;
@@ -20,7 +20,8 @@ Comp<SampleType>::Comp(int sampleRate, int maxBlockSize) :
                                             mControlGain(1, maxBlockSize),
                                             mSignalLevel(1, maxBlockSize),
                                             mSideChain(1, maxBlockSize),
-                                            ballistic()
+                                            ballistic(),
+                                            lookAhead(sampleRate, static_cast<SampleType>(0.01), 2)
 {
     mSampleRate = sampleRate;
     mMaxBlockSize = maxBlockSize;
@@ -28,7 +29,6 @@ Comp<SampleType>::Comp(int sampleRate, int maxBlockSize) :
 
 template <typename SampleType>
 Comp<SampleType>::~Comp() {
-    
 }
 
 template <typename SampleType>
@@ -114,17 +114,19 @@ void Comp<SampleType>::setEstimationType(EstimationType type) {
 }
 
 template <typename SampleType>
-void Comp<SampleType>::processBlock(juce::dsp::ProcessContextNonReplacing<SampleType> &context) {
+void Comp<SampleType>::processBlock(juce::dsp::ProcessContextNonReplacing<SampleType>& inputContext,
+                                    juce::dsp::ProcessContextReplacing<SampleType>& sideChainContext) {
         
-    auto const& input = context.getInputBlock();
-    auto& output = context.getOutputBlock();
+    auto const& input = inputContext.getInputBlock();
+    auto& sideChainInput = sideChainContext.getInputBlock();
+    auto& output = inputContext.getOutputBlock();
     size_t blockSize = input.getNumSamples();
     
     juce::dsp::AudioBlock<SampleType> signalLevel(mSignalLevel);
     juce::dsp::AudioBlock<SampleType> gains(mControlGain);
     juce::dsp::AudioBlock<SampleType> sideChain(mSideChain);
-    sideChain.copyFrom(input.getSingleChannelBlock(0));
-    sideChain.add(input.getSingleChannelBlock(1));
+    sideChain.copyFrom(sideChainInput.getSingleChannelBlock(0));
+    sideChain.add(sideChainInput.getSingleChannelBlock(1));
     sideChain.multiplyBy(0.5);
     
     juce::dsp::ProcessContextNonReplacing<SampleType> context_ballistic(mSideChain, signalLevel);

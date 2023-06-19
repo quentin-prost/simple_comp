@@ -19,7 +19,8 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       ), apvts(*this, nullptr, "Parameters", createParameters()), comp(), outputBuffer()
+                       .withInput ("SideChain", juce::AudioChannelSet::stereo(), true)
+                       ), apvts(*this, nullptr, "Parameters", createParameters()), comp(), inputBuffer(), outputBuffer(), sideChainBuffer()
 #endif
 {
     // Initialisation of audio parameters pointer
@@ -30,6 +31,7 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
     castParameter(apvts, ParameterID::kneeValue, params.knee);
     castParameter(apvts, ParameterID::ratioValue, params.ratio);
     castParameter(apvts, ParameterID::makeUpGainValue, params.makeUpGain);
+    castParameter(apvts, ParameterID::externalSideChain, externalSideChain);
 //    castParameter(apvts, ParameterID::estimationTypeValue, estimationType);
     castParameter(apvts, ParameterID::bypassValue, params.bypass);
     
@@ -40,6 +42,7 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
     apvts.addParameterListener(ParameterID::kneeValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::ratioValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::makeUpGainValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::externalSideChain.getParamID(), this);
 //    apvts.addParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::bypassValue.getParamID(), this);
     
@@ -56,6 +59,7 @@ Simple_compAudioProcessor::~Simple_compAudioProcessor()
     apvts.removeParameterListener(ParameterID::makeUpGainValue.getParamID(), this);
 //    apvts.removeParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
     apvts.removeParameterListener(ParameterID::bypassValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::externalSideChain.getParamID(), this);
 }
 
 //==============================================================================
@@ -166,20 +170,23 @@ void Simple_compAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     juce::ScopedNoDenormals noDenormals;
     
     auto blockSize = getBlockSize();
-    auto inputBlock = juce::dsp::AudioBlock<float> (buffer);
+    inputBuffer = this->getBusBuffer(buffer, true, 0);
+    sideChainBuffer = this->getBusBuffer(buffer, true, 1);
+    auto inputBlock = juce::dsp::AudioBlock<float> (inputBuffer);
+    auto sideChainBlock = juce::dsp::AudioBlock<float> (sideChainBuffer);
     auto outputBlock = juce::dsp::AudioBlock<float> (outputBuffer);
     auto processContext = juce::dsp::ProcessContextNonReplacing<float> (inputBlock, outputBlock);
+    auto sideChainProcessContext = juce::dsp::ProcessContextReplacing<float> (sideChainBlock);
+    
+    comp.processBlock(processContext, sideChainProcessContext);
+    
     auto output_left = buffer.getWritePointer(0);
     auto output_right = buffer.getWritePointer(1);
-    
-    comp.processBlock(processContext);
-    
     for (int n = 0; n < blockSize; n++) {
         output_left[n] = outputBlock.getSample(0, n);
         output_right[n] = outputBlock.getSample(1, n);
     }
-//    limitOutput(buffer.getWritePointer(0), buffer.getNumSamples());
-//    limitOutput(buffer.getWritePointer(1), buffer.getNumSamples());
+
 }
 
 //==============================================================================

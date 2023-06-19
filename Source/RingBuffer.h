@@ -11,7 +11,8 @@
 template<typename SampleType>
 class RingBuffer {
 public:
-    RingBuffer(int sampleRate, int maxDelaySeconds, int numChannels);
+    RingBuffer() {};
+    RingBuffer(int sampleRate, SampleType maxDelaySeconds, int numChannels);
     ~RingBuffer();
     
     int setDelay(int delaySeconds);
@@ -24,6 +25,7 @@ public:
     
     int getNumChannels();
     int maxDelaySamples();
+    void resize(int numSamples, int numChannels);
     void update();
     void reset();
 private:

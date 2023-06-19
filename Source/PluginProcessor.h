@@ -23,6 +23,7 @@ namespace ParameterID
     PARAMETER_ID(ratioValue)
     PARAMETER_ID(makeUpGainValue)
     PARAMETER_ID(estimationTypeValue)
+    PARAMETER_ID(externalSideChain)
     PARAMETER_ID(bypassValue)
 }
 
@@ -67,6 +68,7 @@ public:
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
    #endif
 
+    void setExternalSideChain(bool active);
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     //==============================================================================
@@ -96,9 +98,11 @@ public:
 private:
     Comp<float> comp;
     compAudioProcessorParams params;
+    juce::AudioBuffer<float> inputBuffer;
+    juce::AudioBuffer<float> sideChainBuffer;
     juce::AudioBuffer<float> outputBuffer;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
-    
+    bool externalSideChain;
     void parameterChanged(const juce::String& parameterID, float newValue) override;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Simple_compAudioProcessor)
