@@ -1,6 +1,6 @@
 #include "RingBuffer.h"
 
-static int nextPow2(int x) {
+int nextPow2(int x) {
     return (int) pow(2.0, ceilf( log(x)/log(2.0) ) );
 }
 
