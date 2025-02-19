@@ -40,8 +40,8 @@ void Comp<SampleType>::prepare(const juce::dsp::ProcessSpec &spec) {
     mControlGain.setSize(1, mMaxBlockSize);
     mSignalLevel.setSize(1, mMaxBlockSize);
     mSideChain.setSize(1, mMaxBlockSize);
+    ballistic.setLevelCalculationType(mParams.estimationType);
     ballistic.prepare(spec);
-    setEstimationType(EstimationType::peak);
 }
 
 template <typename SampleType>
@@ -123,20 +123,21 @@ void Comp<SampleType>::processBlock(juce::dsp::ProcessContextNonReplacing<Sample
     size_t blockSize = input.getNumSamples();
     
     juce::dsp::AudioBlock<SampleType> signalLevel(mSignalLevel);
-    juce::dsp::AudioBlock<SampleType> gains(mControlGain);
+    juce::dsp::AudioBlock<SampleType> output_gains(mControlGain);
     juce::dsp::AudioBlock<SampleType> sideChain(mSideChain);
+
     sideChain.copyFrom(sideChainInput.getSingleChannelBlock(0));
     sideChain.add(sideChainInput.getSingleChannelBlock(1));
     sideChain.multiplyBy(0.5);
     
     juce::dsp::ProcessContextNonReplacing<SampleType> context_ballistic(mSideChain, signalLevel);
-    juce::dsp::ProcessContextNonReplacing<SampleType> context_ahr(signalLevel, gains);
+    juce::dsp::ProcessContextNonReplacing<SampleType> context_ahr(signalLevel, output_gains);
     ballistic.process(context_ballistic);
     mAhr.processBlock(context_ahr);
     
     for (int n = 0; n < blockSize; n++) {
         for (int channel = 0; channel < mNumChannels; channel++) {
-            SampleType output_value = input.getSample(channel, n) * gains.getSample(0, n);
+            SampleType output_value = input.getSample(channel, n) * output_gains.getSample(0, n);
             output.setSample(channel, n, output_value);
         }
     }

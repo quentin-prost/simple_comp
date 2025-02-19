@@ -31,8 +31,7 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
     castParameter(apvts, ParameterID::kneeValue, params.knee);
     castParameter(apvts, ParameterID::ratioValue, params.ratio);
     castParameter(apvts, ParameterID::makeUpGainValue, params.makeUpGain);
-    castParameter(apvts, ParameterID::externalSideChain, externalSideChain);
-//    castParameter(apvts, ParameterID::estimationTypeValue, estimationType);
+    castParameter(apvts, ParameterID::estimationTypeValue, params.estimationType);
     castParameter(apvts, ParameterID::bypassValue, params.bypass);
     
     apvts.addParameterListener(ParameterID::attackValue.getParamID(), this);
@@ -43,7 +42,7 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
     apvts.addParameterListener(ParameterID::ratioValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::makeUpGainValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::externalSideChain.getParamID(), this);
-//    apvts.addParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::bypassValue.getParamID(), this);
     
 }
@@ -57,7 +56,7 @@ Simple_compAudioProcessor::~Simple_compAudioProcessor()
     apvts.removeParameterListener(ParameterID::kneeValue.getParamID(), this);
     apvts.removeParameterListener(ParameterID::ratioValue.getParamID(), this);
     apvts.removeParameterListener(ParameterID::makeUpGainValue.getParamID(), this);
-//    apvts.removeParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
     apvts.removeParameterListener(ParameterID::bypassValue.getParamID(), this);
     apvts.removeParameterListener(ParameterID::externalSideChain.getParamID(), this);
 }
@@ -235,6 +234,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Simple_compAudioProcessor::c
     params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::ratioValue, "Ratio", juce::NormalisableRange<float>(1.0f, 20.0f, 0.1f, 1.0f), 2.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::kneeValue, "Knee", juce::NormalisableRange<float>(0.0f, 12.0f, 0.1f, 1.0f), 6.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::makeUpGainValue, "Make Up Gain", juce::NormalisableRange<float>(0.0f, 20.0f, 0.1f, 1.0f), 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::estimationTypeValue, "Estimation Type", juce::StringArray("Peak", "RMS"), 1));
     params.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::bypassValue, "Bypass", false));
     
     paramsLayout.add(params.begin(), params.end());
@@ -275,6 +275,11 @@ void Simple_compAudioProcessor::parameterChanged(const juce::String& paramId, fl
     
     if (paramId == ParameterID::makeUpGainValue.getParamID()) {
         comp.setMakeUpGain(static_cast<float>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::estimationTypeValue.getParamID()) {
+        comp.setEstimationType(static_cast<juce::dsp::BallisticsFilterLevelCalculationType>(newValue));
         return;
     }
     
