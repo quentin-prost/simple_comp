@@ -12,6 +12,8 @@
 #include "Comp.h"
 #include "../Utilities/Utils.h"
 
+#define NUM_EQ_BANDS 4
+
 namespace ParameterID
 {
 #define PARAMETER_ID(str) const juce::ParameterID str(#str, 1);
@@ -25,6 +27,30 @@ namespace ParameterID
     PARAMETER_ID(estimationTypeValue)
     PARAMETER_ID(externalSideChain)
     PARAMETER_ID(bypassValue)
+    PARAMETER_ID(eqBandFreq1)
+    PARAMETER_ID(eqBandQuality1)
+    PARAMETER_ID(eqBandGain1)
+    PARAMETER_ID(eqBandActive1)
+    PARAMETER_ID(eqBandSlope1)
+    PARAMETER_ID(eqBandType1)
+    PARAMETER_ID(eqBandFreq2)
+    PARAMETER_ID(eqBandQuality2)
+    PARAMETER_ID(eqBandGain2)
+    PARAMETER_ID(eqBandActive2)
+    PARAMETER_ID(eqBandSlope2)
+    PARAMETER_ID(eqBandType2)
+    PARAMETER_ID(eqBandFreq3)
+    PARAMETER_ID(eqBandQuality3)
+    PARAMETER_ID(eqBandGain3)
+    PARAMETER_ID(eqBandActive3)
+    PARAMETER_ID(eqBandSlope3)
+    PARAMETER_ID(eqBandType3)
+    PARAMETER_ID(eqBandFreq4)
+    PARAMETER_ID(eqBandQuality4)
+    PARAMETER_ID(eqBandGain4)
+    PARAMETER_ID(eqBandActive4)
+    PARAMETER_ID(eqBandSlope4)
+    PARAMETER_ID(eqBandType4)
 }
 
 template <typename T>
@@ -37,6 +63,19 @@ inline static void castParameter(juce::AudioProcessorValueTreeState& apvts, cons
 /**
 */
 
+struct compEqBandParams {
+    juce::AudioParameterFloat* freq;
+    juce::AudioParameterFloat* quality;
+    juce::AudioParameterFloat* gain;
+    juce::AudioParameterChoice* slope;
+    juce::AudioParameterChoice* type;
+    juce::AudioParameterBool* active;
+};
+
+struct compEqParams {
+    compEqBandParams bands[NUM_EQ_BANDS];
+};
+
 struct compAudioProcessorParams {
     juce::AudioParameterFloat* attack;
     juce::AudioParameterFloat* hold;
@@ -48,6 +87,7 @@ struct compAudioProcessorParams {
     juce::AudioParameterChoice* estimationType;
     juce::AudioParameterBool* externalSideChain;
     juce::AudioParameterBool* bypass;
+    compEqParams eq;
 };
 
 class Simple_compAudioProcessor  : public juce::AudioProcessor,

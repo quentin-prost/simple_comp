@@ -9,6 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+
 //==============================================================================
 Simple_compAudioProcessor::Simple_compAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -20,7 +21,7 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        .withInput ("SideChain", juce::AudioChannelSet::stereo(), true)
-                       ), apvts(*this, nullptr, "Parameters", createParameters()), comp(), inputBuffer(), outputBuffer(), sideChainBuffer() 
+                       ), apvts(*this, nullptr, "Parameters", createParameters()), comp(), inputBuffer(), outputBuffer(), sideChainBuffer()
 #endif
 {
     // Initialisation of audio parameters pointer
@@ -224,9 +225,63 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
     return new Simple_compAudioProcessor();
 }
 
+std::vector<std::unique_ptr<juce::RangedAudioParameter>> createEqualiserParams() {
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> eqParams;
+    
+    float freqSkewFactor = std::log (0.5f) / std::log (980.0f / 19980.0f);
+    float qualitySkewFactor = std::log (0.5f) / std::log (0.9f / 9.9f);
+    // Band 1
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandFreq1, "Freq Band 1",
+        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, freqSkewFactor), 100.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandQuality1, "Quality Factor Band 1",
+        juce::NormalisableRange<float>(0.1f, 10.0f, 1.0f, qualitySkewFactor), 1.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain1, "Gain Band 1",
+        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType1, "Type Filter Band 1", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
+    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandSlope1, "Slope Filter Band 1",
+        juce::StringArray("12 db/oct", "24 db/oct", "36 db/oct", "48 db/oct"), 0));
+    eqParams.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::eqBandActive1, "Active Filter Band 1", false));
+    // Band 2
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandFreq2, "Freq Band 2",
+        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, freqSkewFactor), 100.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandQuality2, "Quality Factor Band 2",
+        juce::NormalisableRange<float>(0.1f, 10.0f, 1.0f, qualitySkewFactor), 1.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain2, "Gain Band 2",
+        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType2, "Type Filter Band 2", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
+    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandSlope2, "Slope Filter Band 2",
+        juce::StringArray("12 db/oct", "24 db/oct", "36 db/oct", "48 db/oct"), 0));
+    eqParams.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::eqBandActive2, "Active Filter Band 2", false));
+    // Band 3
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandFreq3, "Freq Band 3",
+        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, freqSkewFactor), 100.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandQuality3, "Quality Factor Band 3",
+        juce::NormalisableRange<float>(0.1f, 10.0f, 1.0f, qualitySkewFactor), 1.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain3, "Gain Band 3",
+        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType3, "Type Filter Band 3", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
+    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandSlope3, "Slope Filter Band 3",
+        juce::StringArray("12 db/oct", "24 db/oct", "36 db/oct", "48 db/oct"), 0));
+    eqParams.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::eqBandActive3, "Active Filter Band 3", false));
+    // Band 4
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandFreq4, "Freq Band 4",
+        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, freqSkewFactor), 100.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandQuality4, "Quality Factor Band 4",
+        juce::NormalisableRange<float>(0.1f, 10.0f, 1.0f, qualitySkewFactor), 1.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain4, "Gain Band 4",
+        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
+    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType4, "Type Filter Band 4", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
+    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandSlope4, "Slope Filter Band 4",
+        juce::StringArray("12 db/oct", "24 db/oct", "36 db/oct", "48 db/oct"), 0));
+    eqParams.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::eqBandActive4, "Active Filter Band 4", false));
+    
+    return eqParams;
+}
+
 juce::AudioProcessorValueTreeState::ParameterLayout Simple_compAudioProcessor::createParameters() {
 
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> eqParams = createEqualiserParams();
     juce::AudioProcessorValueTreeState::ParameterLayout paramsLayout;
     
     params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::attackValue, "Attack Time", juce::NormalisableRange<float>(0.0001f, 0.5f, 0.0001f, 0.8f), 0.010f));
@@ -239,7 +294,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout Simple_compAudioProcessor::c
     params.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::estimationTypeValue, "Estimation Type", juce::StringArray("Peak", "RMS"), 1));
     params.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::externalSideChain, "External Side Chain", false));
     params.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::bypassValue, "Bypass", false));
+
     
+    params.insert(params.end(), std::make_move_iterator(eqParams.begin()), std::make_move_iterator(eqParams.end()));
     paramsLayout.add(params.begin(), params.end());
     
     return paramsLayout;
