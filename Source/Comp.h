@@ -9,6 +9,7 @@
 
 #include "JuceHeader.h"
 #include "CompAhr.h"
+#include "Equaliser.h"
 
 using EstimationType = juce::dsp::BallisticsFilterLevelCalculationType;
 
@@ -39,15 +40,20 @@ public:
     void setRatio(SampleType ratio);
     void setKnee(SampleType knee);
     void setMakeUpGain(SampleType makeUpGain);
-    void setEstimationType(EstimationType type);
     void setExternalSideChain(bool value);
-    void processBlock(juce::dsp::ProcessContextNonReplacing<SampleType>& inputContext, juce::dsp::ProcessContextReplacing<SampleType>& sideChainContext);
+    void setEstimationType(EstimationType type);
+    void setEqSideChainBypass(bool bypass);
+    void setEqBandBypass(size_t index, bool bypass);
+    void setEqBandParams(size_t index, FilterParams& params);
+    void processBlock(juce::dsp::ProcessContextNonReplacing<SampleType>& inputContext, juce::dsp::ProcessContextNonReplacing<SampleType>& sideChainContext);
     SampleType processSample(SampleType input);
 public:
     CompAhr<SampleType> mAhr;
     juce::AudioBuffer<SampleType> mControlGainBuffer, mSignalLevelBuffer, mSideChainBuffer;
     juce::dsp::BallisticsFilter<SampleType> ballistic;
+    Equaliser<SampleType> eq;
     CompParams<SampleType> mParams = {0.01, 0.0, 0.1, -6.0, 2.0, 5.0, 0.0, EstimationType::peak};
     int mSampleRate = 44100, mMaxBlockSize = 2048, mNumChannels = 2;
-    bool mExternalSideChain;
+    bool mEqSideChainBypass = true;
+    bool mExternalSideChain = false;
 };

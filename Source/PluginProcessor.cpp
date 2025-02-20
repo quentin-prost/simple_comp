@@ -21,7 +21,7 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        .withInput ("SideChain", juce::AudioChannelSet::stereo(), true)
-                       ), apvts(*this, nullptr, "Parameters", createParameters()), comp(), inputBuffer(), outputBuffer(), sideChainBuffer()
+                       ), apvts(*this, nullptr, "Parameters", createParameters()), comp(), inputBuffer(), outputBuffer(), inputSideChainBuffer(), outputSideChainBuffer()
 #endif
 {
     // Initialisation of audio parameters pointer
@@ -35,6 +35,25 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
     castParameter(apvts, ParameterID::estimationTypeValue, params.estimationType);
     castParameter(apvts, ParameterID::externalSideChain, params.externalSideChain);
     castParameter(apvts, ParameterID::bypassValue, params.bypass);
+    castParameter(apvts, ParameterID::eqBandActive1, params.eq.bands[0].active);
+    castParameter(apvts, ParameterID::eqBandFreq1, params.eq.bands[0].freq);
+    castParameter(apvts, ParameterID::eqBandGain1, params.eq.bands[0].gain);
+    castParameter(apvts, ParameterID::eqBandQuality1, params.eq.bands[0].quality);
+    castParameter(apvts, ParameterID::eqBandType1, params.eq.bands[0].type);
+    castParameter(apvts, ParameterID::eqBandSlope2, params.eq.bands[1].slope);
+    castParameter(apvts, ParameterID::eqBandActive2, params.eq.bands[1].active);
+    castParameter(apvts, ParameterID::eqBandFreq2, params.eq.bands[1].freq);
+    castParameter(apvts, ParameterID::eqBandGain2, params.eq.bands[1].gain);
+    castParameter(apvts, ParameterID::eqBandQuality2, params.eq.bands[1].quality);
+    castParameter(apvts, ParameterID::eqBandType2, params.eq.bands[1].type);
+    castParameter(apvts, ParameterID::eqBandSlope2, params.eq.bands[1].slope);
+    castParameter(apvts, ParameterID::eqBandSlope3, params.eq.bands[2].slope);
+    castParameter(apvts, ParameterID::eqBandActive3, params.eq.bands[2].active);
+    castParameter(apvts, ParameterID::eqBandFreq3, params.eq.bands[2].freq);
+    castParameter(apvts, ParameterID::eqBandGain3, params.eq.bands[2].gain);
+    castParameter(apvts, ParameterID::eqBandQuality3, params.eq.bands[2].quality);
+    castParameter(apvts, ParameterID::eqBandType3, params.eq.bands[2].type);
+    castParameter(apvts, ParameterID::eqBandSlope3, params.eq.bands[2].slope);
     
     apvts.addParameterListener(ParameterID::attackValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::holdValue.getParamID(), this);
@@ -46,7 +65,24 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
     apvts.addParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::externalSideChain.getParamID(), this);
     apvts.addParameterListener(ParameterID::bypassValue.getParamID(), this);
-    
+    apvts.addParameterListener(ParameterID::eqBandActive1.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandFreq1.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandGain1.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandQuality1.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandType1.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandSlope1.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandActive2.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandFreq2.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandGain2.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandQuality2.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandType2.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandSlope2.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandActive3.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandFreq3.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandGain3.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandQuality3.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandType3.getParamID(), this);
+    apvts.addParameterListener(ParameterID::eqBandSlope3.getParamID(), this);
 }
 
 Simple_compAudioProcessor::~Simple_compAudioProcessor()
@@ -61,6 +97,24 @@ Simple_compAudioProcessor::~Simple_compAudioProcessor()
     apvts.removeParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
     apvts.removeParameterListener(ParameterID::externalSideChain.getParamID(), this);
     apvts.removeParameterListener(ParameterID::bypassValue.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandActive1.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandFreq1.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandGain1.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandQuality1.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandType1.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandSlope1.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandActive2.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandFreq2.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandGain2.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandQuality2.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandType2.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandSlope2.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandActive3.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandFreq3.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandGain3.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandQuality3.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandType3.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::eqBandSlope3.getParamID(), this);
 }
 
 //==============================================================================
@@ -114,6 +168,7 @@ int Simple_compAudioProcessor::getCurrentProgram()
 
 void Simple_compAudioProcessor::setCurrentProgram (int index)
 {
+    
 }
 
 const juce::String Simple_compAudioProcessor::getProgramName (int index)
@@ -172,12 +227,13 @@ void Simple_compAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     
     auto blockSize = getBlockSize();
     inputBuffer = this->getBusBuffer(buffer, true, 0);
-    sideChainBuffer = this->getBusBuffer(buffer, true, 1);
+    inputSideChainBuffer = this->getBusBuffer(buffer, true, 1);
     auto inputBlock = juce::dsp::AudioBlock<float> (inputBuffer);
-    auto sideChainBlock = juce::dsp::AudioBlock<float> (sideChainBuffer);
     auto outputBlock = juce::dsp::AudioBlock<float> (outputBuffer);
+    auto inputSideChainBlock = juce::dsp::AudioBlock<float> (inputSideChainBuffer);
+    auto outputSideChainBlock = juce::dsp::AudioBlock<float> (outputSideChainBuffer);
     auto processContext = juce::dsp::ProcessContextNonReplacing<float> (inputBlock, outputBlock);
-    auto sideChainProcessContext = juce::dsp::ProcessContextReplacing<float> (sideChainBlock);
+    auto sideChainProcessContext = juce::dsp::ProcessContextNonReplacing<float> (inputSideChainBlock, outputSideChainBlock);
     
     if (!is_bypass) comp.processBlock(processContext, sideChainProcessContext);
     else outputBlock.copyFrom(inputBlock);
@@ -235,9 +291,9 @@ std::vector<std::unique_ptr<juce::RangedAudioParameter>> createEqualiserParams()
         juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, freqSkewFactor), 100.0f));
     eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandQuality1, "Quality Factor Band 1",
         juce::NormalisableRange<float>(0.1f, 10.0f, 1.0f, qualitySkewFactor), 1.0f));
-    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain1, "Gain Band 1",
-        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
-    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType1, "Type Filter Band 1", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
+    //eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain1, "Gain Band 1",
+    //    juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
+    //eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType1, "Type Filter Band 1", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
     eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandSlope1, "Slope Filter Band 1",
         juce::StringArray("12 db/oct", "24 db/oct", "36 db/oct", "48 db/oct"), 0));
     eqParams.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::eqBandActive1, "Active Filter Band 1", false));
@@ -248,32 +304,21 @@ std::vector<std::unique_ptr<juce::RangedAudioParameter>> createEqualiserParams()
         juce::NormalisableRange<float>(0.1f, 10.0f, 1.0f, qualitySkewFactor), 1.0f));
     eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain2, "Gain Band 2",
         juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
-    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType2, "Type Filter Band 2", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
-    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandSlope2, "Slope Filter Band 2",
-        juce::StringArray("12 db/oct", "24 db/oct", "36 db/oct", "48 db/oct"), 0));
+    //eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType2, "Type Filter Band 2", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
+    //eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandSlope2, "Slope Filter Band 2",
+    //    juce::StringArray("12 db/oct", "24 db/oct", "36 db/oct", "48 db/oct"), 0));
     eqParams.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::eqBandActive2, "Active Filter Band 2", false));
     // Band 3
     eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandFreq3, "Freq Band 3",
         juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, freqSkewFactor), 100.0f));
     eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandQuality3, "Quality Factor Band 3",
         juce::NormalisableRange<float>(0.1f, 10.0f, 1.0f, qualitySkewFactor), 1.0f));
-    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain3, "Gain Band 3",
-        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
+    //eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain3, "Gain Band 3",
+    //    juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
     eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType3, "Type Filter Band 3", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
     eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandSlope3, "Slope Filter Band 3",
         juce::StringArray("12 db/oct", "24 db/oct", "36 db/oct", "48 db/oct"), 0));
     eqParams.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::eqBandActive3, "Active Filter Band 3", false));
-    // Band 4
-    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandFreq4, "Freq Band 4",
-        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, freqSkewFactor), 100.0f));
-    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandQuality4, "Quality Factor Band 4",
-        juce::NormalisableRange<float>(0.1f, 10.0f, 1.0f, qualitySkewFactor), 1.0f));
-    eqParams.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::eqBandGain4, "Gain Band 4",
-        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.0f, 1.0f), 0.0f));
-    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandType4, "Type Filter Band 4", juce::StringArray("Lowpass", "Lowshelf", "Peak", "Notch", "Highpass", "Highshelf"), 0));
-    eqParams.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::eqBandSlope4, "Slope Filter Band 4",
-        juce::StringArray("12 db/oct", "24 db/oct", "36 db/oct", "48 db/oct"), 0));
-    eqParams.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::eqBandActive4, "Active Filter Band 4", false));
     
     return eqParams;
 }
@@ -294,8 +339,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout Simple_compAudioProcessor::c
     params.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::estimationTypeValue, "Estimation Type", juce::StringArray("Peak", "RMS"), 1));
     params.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::externalSideChain, "External Side Chain", false));
     params.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::bypassValue, "Bypass", false));
-
-    
     params.insert(params.end(), std::make_move_iterator(eqParams.begin()), std::make_move_iterator(eqParams.end()));
     paramsLayout.add(params.begin(), params.end());
     
@@ -353,4 +396,125 @@ void Simple_compAudioProcessor::parameterChanged(const juce::String& paramId, fl
         is_bypass = static_cast<bool>(newValue);
         return;
     }
+    
+    if (paramId == ParameterID::eqBandActive1.getParamID()) {
+        comp.setEqBandBypass(0, static_cast<bool>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandActive2.getParamID()) {
+        comp.setEqBandBypass(1, static_cast<bool>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandActive3.getParamID()) {
+        comp.setEqBandBypass(2, static_cast<bool>(newValue));
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandFreq1.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(0);
+        params.freq = static_cast<float>(newValue);
+        comp.setEqBandParams(0, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandFreq2.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(1);
+        params.freq = static_cast<float>(newValue);
+        comp.setEqBandParams(1, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandFreq3.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(2);
+        params.freq = static_cast<float>(newValue);
+        comp.setEqBandParams(2, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandQuality1.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(0);
+        params.quality = static_cast<float>(newValue);
+        comp.setEqBandParams(0, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandQuality2.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(1);
+        params.quality = static_cast<float>(newValue);
+        comp.setEqBandParams(1, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandQuality3.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(2);
+        params.quality = static_cast<float>(newValue);
+        comp.setEqBandParams(2, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandGain1.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(0);
+        params.gainDb = static_cast<float>(newValue);
+        comp.setEqBandParams(0, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandGain2.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(1);
+        params.gainDb = static_cast<float>(newValue);
+        comp.setEqBandParams(1, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandGain3.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(2);
+        params.gainDb = static_cast<float>(newValue);
+        comp.setEqBandParams(2, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandSlope1.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(0);
+        params.slope = static_cast<FilterSlope>(newValue);
+        comp.setEqBandParams(0, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandSlope2.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(1);
+        params.slope = static_cast<FilterSlope>(newValue);
+        comp.setEqBandParams(1, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandSlope3.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(2);
+        params.slope = static_cast<FilterSlope>(newValue);
+        comp.setEqBandParams(2, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandType1.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(0);
+        params.type = static_cast<FilterType>(newValue);
+        comp.setEqBandParams(0, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandType2.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(1);
+        params.type = static_cast<FilterType>(newValue);
+        comp.setEqBandParams(1, params);
+        return;
+    }
+    
+    if (paramId == ParameterID::eqBandType3.getParamID()) {
+        FilterParams params = comp.eq.getBandParams(2);
+        params.type = static_cast<FilterType>(newValue);
+        comp.setEqBandParams(2, params);
+        return;
+    }
+    
 }

@@ -8,7 +8,7 @@
 #include "Comp.h"
 
 template <typename SampleType>
-Comp<SampleType>::Comp() : mAhr(), mControlGainBuffer(), mSignalLevelBuffer(), mSideChainBuffer(), ballistic()
+Comp<SampleType>::Comp() : mAhr(), mControlGainBuffer(), mSignalLevelBuffer(), mSideChainBuffer(), ballistic(), eq()
 {
     mSampleRate = 44100;
     mMaxBlockSize = 2048;
@@ -20,7 +20,8 @@ Comp<SampleType>::Comp(int sampleRate, int maxBlockSize) :
                                             mControlGainBuffer(1, maxBlockSize),
                                             mSignalLevelBuffer(1, maxBlockSize),
                                             mSideChainBuffer(1, maxBlockSize),
-                                            ballistic()
+                                            ballistic(),
+                                            eq(sampleRate)
 {
     mSampleRate = sampleRate;
     mMaxBlockSize = maxBlockSize;
@@ -41,6 +42,7 @@ void Comp<SampleType>::prepare(const juce::dsp::ProcessSpec &spec) {
     mSideChainBuffer.setSize(1, mMaxBlockSize);
     ballistic.setLevelCalculationType(mParams.estimationType);
     ballistic.prepare(spec);
+    eq.prepare(spec);
 }
 
 template <typename SampleType>
@@ -108,24 +110,48 @@ void Comp<SampleType>::setEstimationType(EstimationType type) {
 }
 
 template <typename SampleType>
+void Comp<SampleType>::setEqSideChainBypass(bool bypass) {
+    mEqSideChainBypass = bypass;
+}
+
+template <typename SampleType>
+void Comp<SampleType>::setEqBandBypass(size_t index, bool bypass) {
+    eq.setBandBypass(index, bypass);
+}
+
+template <typename SampleType>
+void Comp<SampleType>::setEqBandParams(size_t index, FilterParams& params) {
+    eq.setBandParams(index, params);
+}
+
+template <typename SampleType>
 void Comp<SampleType>::processBlock(juce::dsp::ProcessContextNonReplacing<SampleType>& inputContext,
-                                    juce::dsp::ProcessContextReplacing<SampleType>& sideChainContext) {
+                                    juce::dsp::ProcessContextNonReplacing<SampleType>& extSideChainContext) {
         
     
     auto const& input = inputContext.getInputBlock();
     auto& output = inputContext.getOutputBlock();
-    auto& sideChainInput = mExternalSideChain ? sideChainContext.getInputBlock() : input;
+    auto& sideChainInputContext = mExternalSideChain ? extSideChainContext : inputContext;
     size_t blockSize = input.getNumSamples();
     
-    juce::dsp::AudioBlock<SampleType> signalLevelBlock(mSignalLevelBuffer);
+    juce::dsp::AudioBlock<SampleType> signalLevelBlock;
     juce::dsp::AudioBlock<SampleType> outputGainsBlock(mControlGainBuffer);
-    juce::dsp::AudioBlock<SampleType> sideChainBlock(mSideChainBuffer);
+    juce::dsp::AudioBlock<SampleType> sideChainBlock;
     
-    sideChainBlock.copyFrom(sideChainInput.getSingleChannelBlock(0));
+    /*sideChainBlock.copyFrom(sideChainInput.getSingleChannelBlock(0));
     sideChainBlock.add(sideChainInput.getSingleChannelBlock(1));
+    sideChainBlock.multiplyBy(0.5);*/
+    
+    if (!mEqSideChainBypass)
+        eq.processBlock(sideChainInputContext);
+    
+    /* Side Chain signal for ballistic filter is only mono at the moment (i.e fully linked stereo compression)
+     To do : Add a new parameters that can gradually unlinked the gain reduction for left & right channels */
+    sideChainBlock.copyFrom(sideChainInputContext.getOutputBlock().getSingleChannelBlock(0));
+    sideChainBlock.add(sideChainInputContext.getOutputBlock().getSingleChannelBlock(1));
     sideChainBlock.multiplyBy(0.5);
     
-    juce::dsp::ProcessContextNonReplacing<SampleType> context_ballistic(mSideChainBuffer, signalLevelBlock);
+    juce::dsp::ProcessContextNonReplacing<SampleType> context_ballistic(sideChainBlock, signalLevelBlock);
     juce::dsp::ProcessContextNonReplacing<SampleType> context_ahr(signalLevelBlock, outputGainsBlock);
     ballistic.process(context_ballistic);
     mAhr.processBlock(context_ahr);

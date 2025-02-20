@@ -40,7 +40,7 @@ void updateCutCoefficients(ChainType& chain, const SampleType& coefficients, con
 }
 
 template <typename T>
-void Equaliser<T>::updateLowPassFilter(FilterBand<T>& filter) {
+void Equaliser<T>::updateLowPassFilter(FilterBand& filter) {
     if (filter.params.type != LOWPASS) jassert(false);
     
     auto coefficients = juce::dsp::FilterDesign<T>::designIIRLowpassHighOrderButterworthMethod(filter.params.freq, static_cast<double>(sampleRate), static_cast<int>(filter.params.slope));
@@ -53,7 +53,7 @@ void Equaliser<T>::updateLowPassFilter(FilterBand<T>& filter) {
 }
 
 template <typename T>
-void Equaliser<T>::updateHighPassFilter(FilterBand<T>& filter) {
+void Equaliser<T>::updateHighPassFilter(FilterBand& filter) {
     if (filter.params.type != HIGHPASS) jassert(false);
     auto coefficients = juce::dsp::FilterDesign<T>::designIIRHighpassHighOrderButterworthMethod(filter.params.freq, static_cast<double>(sampleRate), static_cast<int>(filter.params.slope));
     
@@ -65,7 +65,7 @@ void Equaliser<T>::updateHighPassFilter(FilterBand<T>& filter) {
 }
 
 template <typename T>
-void Equaliser<T>::updatePeakFilter(FilterBand<T>& filter) {
+void Equaliser<T>::updatePeakFilter(FilterBand& filter) {
     if (filter.params.type != PEAK) jassert(false);
     
     juce::IIRCoefficients coefs;
@@ -79,7 +79,7 @@ void Equaliser<T>::updatePeakFilter(FilterBand<T>& filter) {
 }
 
 template <typename T>
-void Equaliser<T>::updateFilter(FilterBand<T>& filter) {
+void Equaliser<T>::updateFilter(FilterBand& filter) {
     switch (filter.params.type) {
         case LOWPASS:
             updateLowPassFilter(filter);
@@ -96,10 +96,21 @@ void Equaliser<T>::updateFilter(FilterBand<T>& filter) {
 }
 
 template <typename T>
-Equaliser<T>::Equaliser(T sampleRate) {
-    FilterParams<T> lowPassParams((T) 20000.0, (T) 0.0, (T) 0.0, SLOPE_12, LOWPASS);
-    FilterParams<T> highPassParams((T) 100.0, (T) 0.0, (T) 0.0, SLOPE_12, HIGHPASS);
-    FilterParams<T> peakParams((T) 1000.0, (T) 0.0, (T) 0.0, SLOPE_24, PEAK);
+Equaliser<T>::Equaliser() {
+    FilterParams lowPassParams(20000.0, 0.0, 0.0, SLOPE_12, LOWPASS);
+    FilterParams highPassParams(100.0, 0.0, 0.0, SLOPE_12, HIGHPASS);
+    FilterParams peakParams(1000.0, 0.0, 0.0, SLOPE_24, PEAK);
+    bands[0] = FilterBand("HighPass", highPassParams, 0, true);
+    bands[1] = FilterBand("LowPass", lowPassParams, 1, true);
+    bands[2] = FilterBand("Peak", peakParams, 2, true);
+    updateAll();
+}
+
+template <typename T>
+Equaliser<T>::Equaliser(float sampleRate) {
+    FilterParams lowPassParams((T) 20000.0, (T) 0.0, (T) 0.0, SLOPE_12, LOWPASS);
+    FilterParams highPassParams((T) 100.0, (T) 0.0, (T) 0.0, SLOPE_12, HIGHPASS);
+    FilterParams peakParams((T) 1000.0, (T) 0.0, (T) 0.0, SLOPE_24, PEAK);
     bands[0] = FilterBand("HighPass", highPassParams, 0, true);
     bands[1] = FilterBand("LowPass", lowPassParams, 1, true);
     bands[2] = FilterBand("Peak", peakParams, 2, true);

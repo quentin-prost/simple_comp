@@ -12,7 +12,7 @@
 #include "Comp.h"
 #include "../Utilities/Utils.h"
 
-#define NUM_EQ_BANDS 4
+#define NUM_EQ_BANDS 3
 
 namespace ParameterID
 {
@@ -45,12 +45,6 @@ namespace ParameterID
     PARAMETER_ID(eqBandActive3)
     PARAMETER_ID(eqBandSlope3)
     PARAMETER_ID(eqBandType3)
-    PARAMETER_ID(eqBandFreq4)
-    PARAMETER_ID(eqBandQuality4)
-    PARAMETER_ID(eqBandGain4)
-    PARAMETER_ID(eqBandActive4)
-    PARAMETER_ID(eqBandSlope4)
-    PARAMETER_ID(eqBandType4)
 }
 
 template <typename T>
@@ -139,7 +133,7 @@ public:
 private:
     Comp<float> comp;
     compAudioProcessorParams params;
-    juce::AudioBuffer<float> inputBuffer, outputBuffer, sideChainBuffer;
+    juce::AudioBuffer<float> inputBuffer, outputBuffer, inputSideChainBuffer, outputSideChainBuffer;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     bool externalSideChain = false, is_bypass = false;
     void parameterChanged(const juce::String& parameterID, float newValue) override;

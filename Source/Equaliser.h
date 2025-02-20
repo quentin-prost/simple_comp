@@ -18,31 +18,29 @@ enum FilterSlope {
     SLOPE_48
 };
 
-template <typename T>
 struct FilterParams {
-    FilterParams(T freqToUse, T qualityToUse, T gainToUse, FilterSlope slopeToUse, FilterType typeToUse) :
+    FilterParams(float freqToUse, float qualityToUse, float gainToUse, FilterSlope slopeToUse, FilterType typeToUse) :
         freq(freqToUse),
         quality(qualityToUse),
         gainDb(gainToUse),
         slope(slopeToUse),
         type(typeToUse) {}
-    T freq = static_cast<T>(1000.0);
-    T quality = static_cast<T>(1.0);
-    T gainDb = static_cast<T>(0.0);
+    float freq = static_cast<float>(1000.0);
+    float quality = static_cast<float>(1.0);
+    float gainDb = static_cast<float>(0.0);
     FilterSlope slope = {SLOPE_12};
     FilterType type = {LOWPASS};
 };
 
-template <typename T>
 struct FilterBand {
-    FilterBand (const juce::String& nameToUse, FilterParams<T> paramsToUse, size_t index, T sampleRate) :
+    FilterBand (const juce::String& nameToUse, FilterParams paramsToUse, size_t index, float sampleRate) :
             name(nameToUse),
             params(paramsToUse)
             {}
     juce::String name;
-    FilterParams<T> params;
+    FilterParams params;
     size_t index;
-    T sampleRate;
+    float sampleRate;
     bool bypass = true;
 };
 
@@ -54,10 +52,11 @@ using MonoChain = juce::dsp::ProcessorChain<FilterCutChain, Filter, FilterCutCha
 
 using Coefficients = Filter::CoefficientsPtr;
 
-template <typename T>
+template <typename SampleType>
 class Equaliser {
 public:
-    Equaliser(T sampleRate);
+    Equaliser();
+    Equaliser(float sampleRate);
     ~Equaliser() {};
     
     size_t getNumBands() const {
@@ -68,20 +67,24 @@ public:
         return bands[index].name;
     }
     
-    void bypassBand(size_t index, bool bypass) {
+    void setBandBypass(size_t index, bool bypass) {
         bands[index].bypass = bypass;
-        leftProcessorChain.setBypassed<index>(bypass);
-        rightProcessorChain.setBypassed<index>(bypass);
+        leftProcessorChain.setBypassed<(int) index>(bypass);
+        rightProcessorChain.setBypassed<(int) index>(bypass);
+    }
+    
+    void setBandParams(size_t index, FilterParams& params) {
+        bands[index].params = params;
+        updateFilter(bands[index]);
+    }
+    
+    FilterParams& getBandParams(size_t index) {
+        return bands[index].params;
     }
     
     juce::String getFilterBandName(size_t index) {
         return bands[index].name;
     }
-    
-    void updateFilter(FilterBand<T>& filter);
-    void updateLowPassFilter(FilterBand<T>& filter);
-    void updateHighPassFilter(FilterBand<T>& filter);
-    void updatePeakFilter(FilterBand<T>& filter);
     
     void prepare(const juce::dsp::ProcessSpec &specs) {
         leftProcessorChain.prepare(specs);
@@ -93,12 +96,15 @@ public:
             updateFilter(bands[i]);
     }
     
-    void processBlock(juce::dsp::ProcessContextNonReplacing<T>& buffer);
+    void processBlock(juce::dsp::ProcessContextNonReplacing<SampleType>& buffer);
     
 private:
-    std::vector<FilterBand<T>> bands;
+    void updateFilter(FilterBand& filter);
+    void updateLowPassFilter(FilterBand& filter);
+    void updateHighPassFilter(FilterBand& filter);
+    void updatePeakFilter(FilterBand& filter);
+    std::vector<FilterBand> bands;
     MonoChain leftProcessorChain, rightProcessorChain;
-    T sampleRate = 44100.0;
+    float sampleRate = 44100.0;
     const int _bands = 3;
-    
 };
