@@ -20,7 +20,7 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        .withInput ("SideChain", juce::AudioChannelSet::stereo(), true)
-                       ), apvts(*this, nullptr, "Parameters", createParameters()), comp(), inputBuffer(), outputBuffer(), sideChainBuffer()
+                       ), apvts(*this, nullptr, "Parameters", createParameters()), comp(), inputBuffer(), outputBuffer(), sideChainBuffer() 
 #endif
 {
     // Initialisation of audio parameters pointer
@@ -32,6 +32,7 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
     castParameter(apvts, ParameterID::ratioValue, params.ratio);
     castParameter(apvts, ParameterID::makeUpGainValue, params.makeUpGain);
     castParameter(apvts, ParameterID::estimationTypeValue, params.estimationType);
+    castParameter(apvts, ParameterID::externalSideChain, params.externalSideChain);
     castParameter(apvts, ParameterID::bypassValue, params.bypass);
     
     apvts.addParameterListener(ParameterID::attackValue.getParamID(), this);
@@ -41,8 +42,8 @@ Simple_compAudioProcessor::Simple_compAudioProcessor()
     apvts.addParameterListener(ParameterID::kneeValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::ratioValue.getParamID(), this);
     apvts.addParameterListener(ParameterID::makeUpGainValue.getParamID(), this);
-    apvts.addParameterListener(ParameterID::externalSideChain.getParamID(), this);
     apvts.addParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
+    apvts.addParameterListener(ParameterID::externalSideChain.getParamID(), this);
     apvts.addParameterListener(ParameterID::bypassValue.getParamID(), this);
     
 }
@@ -57,8 +58,8 @@ Simple_compAudioProcessor::~Simple_compAudioProcessor()
     apvts.removeParameterListener(ParameterID::ratioValue.getParamID(), this);
     apvts.removeParameterListener(ParameterID::makeUpGainValue.getParamID(), this);
     apvts.removeParameterListener(ParameterID::estimationTypeValue.getParamID(), this);
-    apvts.removeParameterListener(ParameterID::bypassValue.getParamID(), this);
     apvts.removeParameterListener(ParameterID::externalSideChain.getParamID(), this);
+    apvts.removeParameterListener(ParameterID::bypassValue.getParamID(), this);
 }
 
 //==============================================================================
@@ -177,8 +178,9 @@ void Simple_compAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     auto processContext = juce::dsp::ProcessContextNonReplacing<float> (inputBlock, outputBlock);
     auto sideChainProcessContext = juce::dsp::ProcessContextReplacing<float> (sideChainBlock);
     
-    comp.processBlock(processContext, sideChainProcessContext);
-    
+    if (!is_bypass) comp.processBlock(processContext, sideChainProcessContext);
+    else outputBlock.copyFrom(inputBlock);
+
     auto output_left = buffer.getWritePointer(0);
     auto output_right = buffer.getWritePointer(1);
     for (int n = 0; n < blockSize; n++) {
@@ -235,6 +237,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Simple_compAudioProcessor::c
     params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::kneeValue, "Knee", juce::NormalisableRange<float>(0.0f, 12.0f, 0.1f, 1.0f), 6.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(ParameterID::makeUpGainValue, "Make Up Gain", juce::NormalisableRange<float>(0.0f, 20.0f, 0.1f, 1.0f), 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterChoice>(ParameterID::estimationTypeValue, "Estimation Type", juce::StringArray("Peak", "RMS"), 1));
+    params.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::externalSideChain, "External Side Chain", false));
     params.push_back(std::make_unique<juce::AudioParameterBool>(ParameterID::bypassValue, "Bypass", false));
     
     paramsLayout.add(params.begin(), params.end());
@@ -283,8 +286,14 @@ void Simple_compAudioProcessor::parameterChanged(const juce::String& paramId, fl
         return;
     }
     
+    if (paramId == ParameterID::externalSideChain.getParamID()) {
+        bool value = static_cast<bool>(newValue);
+        comp.setExternalSideChain(value);
+        return;
+    }
+    
     if (paramId == ParameterID::bypassValue.getParamID()) {
-        comp.setBypass(static_cast<bool>(newValue));
+        is_bypass = static_cast<bool>(newValue);
         return;
     }
 }

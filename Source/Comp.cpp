@@ -8,7 +8,7 @@
 #include "Comp.h"
 
 template <typename SampleType>
-Comp<SampleType>::Comp() : mAhr(), mControlGain(), mSignalLevel(), mSideChain(), ballistic(), lookAhead(44100, 0.01, 2)
+Comp<SampleType>::Comp() : mAhr(), mControlGainBuffer(), mSignalLevelBuffer(), mSideChainBuffer(), ballistic()
 {
     mSampleRate = 44100;
     mMaxBlockSize = 2048;
@@ -17,11 +17,10 @@ Comp<SampleType>::Comp() : mAhr(), mControlGain(), mSignalLevel(), mSideChain(),
 template <typename SampleType>
 Comp<SampleType>::Comp(int sampleRate, int maxBlockSize) :
                                             mAhr(sampleRate, maxBlockSize),
-                                            mControlGain(1, maxBlockSize),
-                                            mSignalLevel(1, maxBlockSize),
-                                            mSideChain(1, maxBlockSize),
-                                            ballistic(),
-                                            lookAhead(sampleRate, static_cast<SampleType>(0.01), 2)
+                                            mControlGainBuffer(1, maxBlockSize),
+                                            mSignalLevelBuffer(1, maxBlockSize),
+                                            mSideChainBuffer(1, maxBlockSize),
+                                            ballistic()
 {
     mSampleRate = sampleRate;
     mMaxBlockSize = maxBlockSize;
@@ -37,9 +36,9 @@ void Comp<SampleType>::prepare(const juce::dsp::ProcessSpec &spec) {
     mMaxBlockSize = spec.maximumBlockSize;
     mNumChannels = spec.numChannels;
     mAhr.prepare(spec);
-    mControlGain.setSize(1, mMaxBlockSize);
-    mSignalLevel.setSize(1, mMaxBlockSize);
-    mSideChain.setSize(1, mMaxBlockSize);
+    mControlGainBuffer.setSize(1, mMaxBlockSize);
+    mSignalLevelBuffer.setSize(1, mMaxBlockSize);
+    mSideChainBuffer.setSize(1, mMaxBlockSize);
     ballistic.setLevelCalculationType(mParams.estimationType);
     ballistic.prepare(spec);
 }
@@ -87,13 +86,8 @@ void Comp<SampleType>::setMakeUpGain(SampleType makeUpGain) {
 }
 
 template <typename SampleType>
-void Comp<SampleType>::setBypass(bool active) {
-    bypass = active;
-}
-
-template <typename SampleType>
-void Comp<SampleType>::setLookAhead(bool active, SampleType lookAheadTime) {
-    mLookAheadTime = lookAheadTime;
+void Comp<SampleType>::setExternalSideChain(bool value) {
+    mExternalSideChain = value;
 }
 
 template <typename SampleType>
@@ -117,31 +111,31 @@ template <typename SampleType>
 void Comp<SampleType>::processBlock(juce::dsp::ProcessContextNonReplacing<SampleType>& inputContext,
                                     juce::dsp::ProcessContextReplacing<SampleType>& sideChainContext) {
         
+    
     auto const& input = inputContext.getInputBlock();
-    auto& sideChainInput = sideChainContext.getInputBlock();
     auto& output = inputContext.getOutputBlock();
+    auto& sideChainInput = mExternalSideChain ? sideChainContext.getInputBlock() : input;
     size_t blockSize = input.getNumSamples();
     
-    juce::dsp::AudioBlock<SampleType> signalLevel(mSignalLevel);
-    juce::dsp::AudioBlock<SampleType> output_gains(mControlGain);
-    juce::dsp::AudioBlock<SampleType> sideChain(mSideChain);
-
-    sideChain.copyFrom(sideChainInput.getSingleChannelBlock(0));
-    sideChain.add(sideChainInput.getSingleChannelBlock(1));
-    sideChain.multiplyBy(0.5);
+    juce::dsp::AudioBlock<SampleType> signalLevelBlock(mSignalLevelBuffer);
+    juce::dsp::AudioBlock<SampleType> outputGainsBlock(mControlGainBuffer);
+    juce::dsp::AudioBlock<SampleType> sideChainBlock(mSideChainBuffer);
     
-    juce::dsp::ProcessContextNonReplacing<SampleType> context_ballistic(mSideChain, signalLevel);
-    juce::dsp::ProcessContextNonReplacing<SampleType> context_ahr(signalLevel, output_gains);
+    sideChainBlock.copyFrom(sideChainInput.getSingleChannelBlock(0));
+    sideChainBlock.add(sideChainInput.getSingleChannelBlock(1));
+    sideChainBlock.multiplyBy(0.5);
+    
+    juce::dsp::ProcessContextNonReplacing<SampleType> context_ballistic(mSideChainBuffer, signalLevelBlock);
+    juce::dsp::ProcessContextNonReplacing<SampleType> context_ahr(signalLevelBlock, outputGainsBlock);
     ballistic.process(context_ballistic);
     mAhr.processBlock(context_ahr);
     
     for (int n = 0; n < blockSize; n++) {
         for (int channel = 0; channel < mNumChannels; channel++) {
-            SampleType output_value = input.getSample(channel, n) * output_gains.getSample(0, n);
+            SampleType output_value = input.getSample(channel, n) * outputGainsBlock.getSample(0, n);
             output.setSample(channel, n, output_value);
         }
     }
-    
 }
 
 template class Comp<float>;

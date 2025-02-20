@@ -46,6 +46,7 @@ struct compAudioProcessorParams {
     juce::AudioParameterFloat* ratio;
     juce::AudioParameterFloat* makeUpGain;
     juce::AudioParameterChoice* estimationType;
+    juce::AudioParameterBool* externalSideChain;
     juce::AudioParameterBool* bypass;
 };
 
@@ -98,11 +99,9 @@ public:
 private:
     Comp<float> comp;
     compAudioProcessorParams params;
-    juce::AudioBuffer<float> inputBuffer;
-    juce::AudioBuffer<float> sideChainBuffer;
-    juce::AudioBuffer<float> outputBuffer;
+    juce::AudioBuffer<float> inputBuffer, outputBuffer, sideChainBuffer;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
-    bool externalSideChain;
+    bool externalSideChain = false, is_bypass = false;
     void parameterChanged(const juce::String& parameterID, float newValue) override;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Simple_compAudioProcessor)
